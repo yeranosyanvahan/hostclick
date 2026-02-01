@@ -1,20 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { MousePointer2, ArrowLeft } from 'lucide-react';
+import { MousePointer2, ArrowLeft, Check, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
+    subdomain: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null);
+  const [checkingSubdomain, setCheckingSubdomain] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
+  // Check subdomain availability
+  useEffect(() => {
+    const checkSubdomain = async () => {
+      if (formData.subdomain.length < 3) {
+        setSubdomainAvailable(null);
+        return;
+      }
+
+      // Validate subdomain format
+      const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+      if (!subdomainRegex.test(formData.subdomain.toLowerCase())) {
+        setSubdomainAvailable(false);
+        return;
+      }
+
+      setCheckingSubdomain(true);
+      try {
+        const { data, error } = await supabase.rpc('is_subdomain_available', {
+          check_subdomain: formData.subdomain.toLowerCase(),
+        });
+
+        if (error) throw error;
+        setSubdomainAvailable(data);
+      } catch (error) {
+        console.error('Error checking subdomain:', error);
+        setSubdomainAvailable(null);
+      } finally {
+        setCheckingSubdomain(false);
+      }
+    };
+
+    const debounce = setTimeout(checkSubdomain, 500);
+    return () => clearTimeout(debounce);
+  }, [formData.subdomain]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -34,14 +82,28 @@ const Signup = () => {
       return;
     }
 
+    if (formData.subdomain.length < 3) {
+      toast.error('Subdomain must be at least 3 characters');
+      return;
+    }
+
+    if (!subdomainAvailable) {
+      toast.error('Subdomain is not available');
+      return;
+    }
+
     setIsLoading(true);
     
-    // Simulate signup - will be connected to Supabase later
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('Account created successfully!');
+    const { error } = await signUp(formData.email, formData.password, formData.subdomain);
+    
+    setIsLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Account created! Please check your email to verify.');
       navigate('/');
-    }, 1000);
+    }
   };
 
   return (
@@ -54,12 +116,41 @@ const Signup = () => {
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>
-            Sign up to save your hosting days across devices
+            Sign up to save your hosting days and get your subdomain
           </CardDescription>
         </CardHeader>
         
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="subdomain">Your Subdomain</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="subdomain"
+                  name="subdomain"
+                  type="text"
+                  placeholder="yoursite"
+                  value={formData.subdomain}
+                  onChange={handleInputChange}
+                  required
+                  className="flex-1"
+                />
+                <span className="text-muted-foreground whitespace-nowrap">.hostclick.am</span>
+                {checkingSubdomain && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                {!checkingSubdomain && subdomainAvailable === true && (
+                  <Check className="h-4 w-4 text-green-500" />
+                )}
+                {!checkingSubdomain && subdomainAvailable === false && (
+                  <X className="h-4 w-4 text-destructive" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formData.subdomain.length >= 3 && subdomainAvailable === false
+                  ? 'This subdomain is taken or invalid'
+                  : 'Lowercase letters, numbers, and hyphens only'}
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -101,9 +192,20 @@ const Signup = () => {
           </CardContent>
           
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading || !subdomainAvailable}
+            >
               {isLoading ? 'Creating Account...' : 'Sign Up'}
             </Button>
+
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link to="/login" className="text-primary hover:underline">
+                Log in
+              </Link>
+            </p>
             
             <Link 
               to="/" 

@@ -14,13 +14,43 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          clicks: number
+          created_at: string
+          id: string
+          subdomain: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number
+          created_at?: string
+          id?: string
+          subdomain: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number
+          created_at?: string
+          id?: string
+          subdomain?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_clicks: { Args: { profile_user_id: string }; Returns: number }
+      is_subdomain_available: {
+        Args: { check_subdomain: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
