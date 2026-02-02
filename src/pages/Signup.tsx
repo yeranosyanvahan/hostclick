@@ -25,7 +25,7 @@ const Signup = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -102,7 +102,7 @@ const Signup = () => {
       toast.error(error.message);
     } else {
       toast.success('Account created! Please check your email to verify.');
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
