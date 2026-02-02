@@ -20,7 +20,7 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -42,7 +42,7 @@ const Login = () => {
       toast.error(error.message);
     } else {
       toast.success('Welcome back!');
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
