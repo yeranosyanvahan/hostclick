@@ -1,4 +1,4 @@
-name: Build & Push Hosting Panel Image
+name: Build & Push Hosting Panel and API Images
 
 on:
   push:
@@ -24,11 +24,18 @@ jobs:
         username: yeranosyanvahan
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and push image
+    - name: Build and push panel image
       uses: docker/build-push-action@v4
       with:
         context: .
         file: ./Dockerfile
         push: true
-        tags: |
-          docker.io/yeranosyanvahan/hostclick:latest
+        tags: docker.io/yeranosyanvahan/hostclick:latest
+
+    - name: Build and push API image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.api
+        push: true
+        tags: docker.io/yeranosyanvahan/hostclick-api:latest
