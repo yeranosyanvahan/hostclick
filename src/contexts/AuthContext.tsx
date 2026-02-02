@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, subdomain: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, subdomain: string, initialClicks?: number) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -34,29 +34,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, subdomain: string) => {
+  const signUp = async (email: string, password: string, subdomain: string, initialClicks?: number) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Check if subdomain is available first
+      const { data: available, error: checkError } = await supabase.rpc('is_subdomain_available', {
+        check_subdomain: subdomain.toLowerCase(),
+      });
+
+      if (checkError) throw checkError;
+      if (!available) {
+        throw new Error('subdomain_taken');
+      }
+
+      // Sign up with subdomain and initial clicks in user metadata
+      // The database trigger will create the profile automatically
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: window.location.origin,
+          data: {
+            subdomain: subdomain.toLowerCase(),
+            initial_clicks: initialClicks ?? 0,
+          },
         },
       });
 
-      if (error) throw error;
-
-      // Create profile with subdomain after signup
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: data.user.id,
-            subdomain: subdomain.toLowerCase(),
-            clicks: 0,
-          });
-
-        if (profileError) throw profileError;
+      if (error) {
+        // Handle specific error cases
+        if (error.message?.includes('already registered') || error.message?.includes('User already registered')) {
+          throw new Error('email_registered');
+        }
+        throw error;
       }
 
       return { error: null };
@@ -71,7 +80,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password,
       });
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('Invalid login credentials')) {
+          throw new Error('invalid_credentials');
+        }
+        if (error.message?.includes('Email not confirmed')) {
+          throw new Error('email_not_confirmed');
+        }
+        throw error;
+      }
       return { error: null };
     } catch (error) {
       return { error: error as Error };
