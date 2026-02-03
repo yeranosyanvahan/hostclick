@@ -19,7 +19,7 @@ def handle_request(suspended: bool):
 
     logger.info(json.dumps(payload, indent=2))
 
-    vhostname = payload.get("subdomain")
+    vhostname = f"""{payload.get("subdomain")}.hostclick.am"""
     if not vhostname:
         return {"status": "ignored", "reason": "missing subdomain"}
 
