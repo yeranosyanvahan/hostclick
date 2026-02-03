@@ -1,5 +1,5 @@
-curl -X POST http://hostclick.am/api/v1/webhooks/suspend \
+curl -X POST http://hostclick.am/api/v1/webhooks/unsuspend \
   -H "Content-Type: application/json" \
   -d '{
-    "subdomain": "example.yourdomain.com"
+    "subdomain": "aaa.hostclick.am"
   }'

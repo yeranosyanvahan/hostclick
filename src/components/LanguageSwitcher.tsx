@@ -10,7 +10,7 @@ import { Globe } from 'lucide-react';
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'hy', name: 'Հայdelays', flag: '🇦🇲' },
+  { code: 'hy', name: 'Հայերեն', flag: '🇦🇲' },
 ];
 
 export const LanguageSwitcher = () => {
