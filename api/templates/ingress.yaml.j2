@@ -1,0 +1,22 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: hostclick-{{ vhostname }}-ingress-suspend
+  namespace: host-hostclick-public
+  labels:
+    managed-by: hostclick
+spec:
+  repo: https://yeranosyanvahan.github.io/helmcharts
+  chart: chartologist
+  targetNamespace: host-hostclick-public
+  version: 1.6.2
+  valuesContent: |-
+    Ingress:
+      annotations:
+        cert-manager.io/cluster-issuer: cluster-issuer
+      name: hostclick-{{ vhostname }}-ingress-suspend
+      tls_secret: {{ vhostname }}-tls
+      hosts:
+      - hostname: {{ vhostname }}
+        forwardhost: {{ backend | replace('.', '-') }}
+        forwardport: 80

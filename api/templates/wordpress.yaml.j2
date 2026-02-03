@@ -1,0 +1,27 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: hostclick-{{ vhostname }}-wordpress
+  namespace: host-hostclick-public
+  labels:
+    managed-by: hostclick
+spec:
+  repo: https://yeranosyanvahan.github.io/helmcharts
+  chart: mariadb-wordpress-chart
+  targetNamespace: host-hostclick-public
+  version: 0.12.1
+  valuesSecrets:
+    - name: wordpress-hostclick-helmcharttemplate-secret
+      ignoreUpdates: false
+      keys:
+        - values.yaml
+  valuesContent: |-
+
+    ingress:
+      enabled: {{ ingress['enabled'] | string | lower  }}
+      hostname: {{ vhostname }}
+        
+    wordpress:
+      replicas: {{ replicas }}
+
+
