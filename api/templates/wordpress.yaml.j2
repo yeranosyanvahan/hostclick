@@ -1,7 +1,7 @@
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
-  name: hostclick-{{ vhostname }}-wordpress
+  name: hostclick-{{ name if name is defined else vhostname }}-wordpress
   namespace: host-hostclick-public
   labels:
     managed-by: hostclick

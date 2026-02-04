@@ -1,7 +1,7 @@
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
-  name: hostclick-{{ vhostname }}-ingress-suspend
+  name: hostclick-{{ name if name is defined else vhostname }}-ingress-suspend
   namespace: host-hostclick-public
   labels:
     managed-by: hostclick
