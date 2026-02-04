@@ -44,21 +44,31 @@ class HelmTemplates:
         )
 
     @staticmethod
-    def odoo(vhostname, enabled: bool):
-        return HelmTemplates._render(
-            "odoo.yaml.j2",
-            vhostname=vhostname,
-            replicas=1 if enabled else 0,
-            ingress={"enabled": enabled}
-        )
-
-    @staticmethod
     def wordpress(vhostname, enabled: bool):
         return HelmTemplates._render(
             "wordpress.yaml.j2",
             vhostname=vhostname,
             replicas=1 if enabled else 0,
             ingress={"enabled": enabled}
+        )
+
+    @staticmethod
+    def ingress_with_name(vhostname, backend, name):
+        return HelmTemplates._render(
+            "ingress.yaml.j2",
+            vhostname=vhostname,
+            backend=backend,
+            name=name
+        )
+
+    @staticmethod
+    def wordpress_with_name(vhostname, enabled: bool,name):
+        return HelmTemplates._render(
+            "wordpress.yaml.j2",
+            vhostname=vhostname,
+            replicas=1 if enabled else 0,
+            ingress={"enabled": enabled},
+            name=name
         )
 
     # -----------------------------

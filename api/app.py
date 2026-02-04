@@ -67,13 +67,13 @@ def handle_request_raw(suspended: bool):
     if not vhostname:
         return {"status": "ignored", "reason": "missing subdomain"}
 
-    ingress_yaml = HelmTemplates.ingress(
+    ingress_yaml = HelmTemplates.ingress_with_name(
         vhostname=vhostname,
         backend=SERVICE_NAME,
         name=name,
     )
 
-    app_yaml = HelmTemplates.wordpress(
+    app_yaml = HelmTemplates.wordpress_with_name(
         vhostname=vhostname,
         enabled=not suspended,
         name=name,
