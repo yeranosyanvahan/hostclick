@@ -9,63 +9,45 @@ const execPromise = promisify(exec);
 const app = express();
 app.use(express.json());
 
-// Store transports to link the SSE stream with POST messages
 const transports = new Map<string, SSEServerTransport>();
 
-const server = new McpServer({
-    name: "komonal-shell-brain",
-    version: "1.0.0"
-});
-
-/**
- * Tool: run_command
- * Purpose: Allows the AI to execute terminal commands inside the pod.
- */
-server.tool(
-    "run_command",
-    "Executes a shell command in the container and returns stdout/stderr.",
-    {
-        command: z.string().describe("The full shell command to execute"),
-        timeout: z.number().optional().default(30000).describe("Timeout in milliseconds")
-    },
-    async ({ command, timeout }) => {
-        console.log(`🛠️ Executing: ${command}`);
-        try {
-            const { stdout, stderr } = await execPromise(command, { timeout });
-            return {
-                content: [
-                    { type: "text", text: `STDOUT:\n${stdout}` },
-                    { type: "text", text: `STDERR:\n${stderr}` }
-                ].filter(c => c.text.length > 8) // Only return if there's actual content
-            };
-        } catch (error: any) {
-            return {
-                content: [{ type: "text", text: `Error: ${error.message}` }],
-                isError: true
-            };
-        }
-    }
-);
-
-// --- SSE INFRASTRUCTURE ---
-
+// --- MOVE THE LOGIC INSIDE THE ROUTE ---
 app.get("/sse", async (req, res) => {
+    console.log("📡 New SSE Connection Request");
+
+    // 1. Create a NEW server for THIS specific request
+    const server = new McpServer({
+        name: "komonal-shell-brain",
+        version: "1.0.0"
+    });
+
+    // 2. Register tools to THIS server instance
+    server.tool(
+        "run_command",
+        "Executes a shell command",
+        { command: z.string().describe("The command to run") },
+        async ({ command }) => {
+            const { stdout, stderr } = await execPromise(command);
+            return { content: [{ type: "text", text: stdout || stderr }] };
+        }
+    );
+
+    // 3. Create the transport
     const transport = new SSEServerTransport("/messages", res);
     transports.set(transport.sessionId, transport);
     
+    // 4. Connect THIS server to THIS transport
     await server.connect(transport);
-    console.log(`📡 Session started: ${transport.sessionId}`);
 
-    req.on("close", () => {
+    req.on("close", async () => {
+        console.log(`🔌 Cleaning up session ${transport.sessionId}`);
         transports.delete(transport.sessionId);
-        console.log(`🔌 Session closed: ${transport.sessionId}`);
+        await server.close(); // Crucial: close the server when client leaves
     });
 });
 
 app.post("/messages", async (req, res) => {
-    const sessionId = req.query.sessionId as string;
-    const transport = transports.get(sessionId);
-
+    const transport = transports.get(req.query.sessionId as string);
     if (transport) {
         await transport.handlePostMessage(req, res);
     } else {
@@ -74,5 +56,5 @@ app.post("/messages", async (req, res) => {
 });
 
 app.listen(3000, "0.0.0.0", () => {
-    console.log("🧠 Shell MCP Server listening on port 3000");
+    console.log("🧠 MCP Server fixed and listening on port 3000");
 });
