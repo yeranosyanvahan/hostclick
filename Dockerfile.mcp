@@ -1,0 +1,28 @@
+FROM node:20-slim
+
+# Create and set the working directory
+WORKDIR /app
+
+# Install essential build tools if needed (optional for pure JS/TS)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy package files first for better caching
+COPY ./mcp/package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the /mcp folder contents
+COPY ./mcp/ .
+
+# Install tsx globally to run the TypeScript source
+RUN npm install -g tsx
+
+# Expose MCP port
+EXPOSE 3000
+
+# Set environment variables (optional)
+ENV NODE_ENV=production
+
+# Start the brain
+CMD ["npx", "tsx", "src/index.ts"]

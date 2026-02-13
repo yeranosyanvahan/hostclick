@@ -39,3 +39,11 @@ jobs:
         file: ./Dockerfile.api
         push: true
         tags: docker.io/yeranosyanvahan/hostclick-api:latest
+
+    - name: Build and push MCP Server
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.mcp
+        push: true
+        tags: docker.io/yeranosyanvahan/basic-mcp-server:latest
