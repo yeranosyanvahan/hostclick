@@ -7,21 +7,16 @@ import { promisify } from "util";
 
 const execPromise = promisify(exec);
 const app = express();
-app.use(express.json());
 
+// Track transports in a map
 const transports = new Map<string, SSEServerTransport>();
 
-// --- MOVE THE LOGIC INSIDE THE ROUTE ---
 app.get("/sse", async (req, res) => {
-    console.log("📡 New SSE Connection Request");
-
-    // 1. Create a NEW server for THIS specific request
     const server = new McpServer({
         name: "komonal-shell-brain",
         version: "1.0.0"
     });
 
-    // 2. Register tools to THIS server instance
     server.tool(
         "run_command",
         "Executes a shell command",
@@ -32,33 +27,39 @@ app.get("/sse", async (req, res) => {
         }
     );
 
-    // 3. Create the transport
+    // No need for a custom endpoint string here, the SDK handles session routing
     const transport = new SSEServerTransport("/messages", res);
     transports.set(transport.sessionId, transport);
     
-    // 4. Connect THIS server to THIS transport
     await server.connect(transport);
 
     req.on("close", async () => {
-        console.log(`🔌 Cleaning up session ${transport.sessionId}`);
         transports.delete(transport.sessionId);
-        await server.close(); // Crucial: close the server when client leaves
+        await server.close();
     });
 });
 
+// IMPORTANT: No express.json() middleware. Let the SDK read the stream.
 app.post("/messages", async (req, res) => {
     const sessionId = req.query.sessionId as string;
     const transport = transports.get(sessionId);
 
     if (transport) {
-        // CRITICAL FIX: Pass req.body as the third argument
-        // This tells the SDK "Don't try to read the stream, use this data instead"
-        await transport.handlePostMessage(req, res, req.body);
+        // Here, we let the SDK read the raw request stream
+        await transport.handlePostMessage(req, res);
     } else {
         res.status(404).send("Session not found");
     }
 });
 
-app.listen(3000, "0.0.0.0", () => {
-    console.log("🧠 MCP Server fixed and listening on port 3000");
+const server = app.listen(3000, "0.0.0.0", () => {
+    console.log("🧠 MCP Brain Online at port 3000");
+});
+
+// Handle SIGTERM gracefully to avoid npm errors
+process.on('SIGTERM', () => {
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
 });
