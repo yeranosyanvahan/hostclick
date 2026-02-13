@@ -47,9 +47,13 @@ app.get("/sse", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-    const transport = transports.get(req.query.sessionId as string);
+    const sessionId = req.query.sessionId as string;
+    const transport = transports.get(sessionId);
+
     if (transport) {
-        await transport.handlePostMessage(req, res);
+        // CRITICAL FIX: Pass req.body as the third argument
+        // This tells the SDK "Don't try to read the stream, use this data instead"
+        await transport.handlePostMessage(req, res, req.body);
     } else {
         res.status(404).send("Session not found");
     }
